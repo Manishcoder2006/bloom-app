@@ -1,29 +1,21 @@
-import { useParams, Link } from 'react-router-dom';
-import { products as staticProducts } from '../data/products';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Truck, Shield, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useCart } from '../context/CartContext';
 
 export default function ProductDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState(null);
   const [isAdded, setIsAdded] = useState(false);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     const loadProduct = async () => {
-      // 1. Check static products
-      let found = staticProducts.find(p => p.id === id);
-      if (found) {
-        setProduct(found);
-        setSelectedSize(found?.sizes ? found.sizes[2] || found.sizes[0] : null);
-        setLoading(false);
-        return;
-      }
-
-      // 2. Fallback to Firebase
       try {
         const docRef = doc(db, 'products', id);
         const docSnap = await getDoc(docRef);
@@ -80,7 +72,7 @@ export default function ProductDetails() {
           <div>
             <span className="text-xs tracking-[0.2em] font-bold uppercase text-emerald-400 mb-2 block">{product.category}</span>
             <h1 className="text-4xl font-semibold tracking-tight text-white mb-4">{product.name}</h1>
-            <p className="text-3xl font-mono text-white/90 font-light">${product.price}</p>
+            <p className="text-3xl font-mono text-white/90 font-light">₹{product.price}</p>
           </div>
 
           <p className="text-white/60 leading-relaxed font-light">
@@ -108,10 +100,13 @@ export default function ProductDetails() {
 
           {!isAdded ? (
             <button 
-              onClick={() => setIsAdded(true)}
+              onClick={() => {
+                addToCart(product, selectedSize);
+                setIsAdded(true);
+              }}
               className="w-full py-5 rounded-full bg-white text-black font-semibold text-lg hover:bg-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.4)] transition-all duration-500 mt-8 mb-4"
             >
-              Add to Bag - ${(product.price).toFixed(2)}
+              Add to Bag - ₹{(Number(product.price)).toFixed(2)}
             </button>
           ) : (
             <Link 

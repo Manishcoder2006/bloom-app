@@ -1,14 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Trash2, ArrowRight } from 'lucide-react';
-import { products } from '../data/products';
+import { Trash2, ArrowRight, Plus, Minus } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 
 export default function Cart() {
-  const cartItems = [
-    { ...products[0], quantity: 1, size: 9 },
-    { ...products[3], quantity: 1, size: 10 }
-  ];
+  const { cartItems, removeFromCart, updateQuantity } = useCart();
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
 
   return (
     <div className="pt-32 pb-12 w-full max-w-5xl mx-auto space-y-12">
@@ -27,18 +24,38 @@ export default function Cart() {
               <div className="flex-1 space-y-2">
                 <div className="flex justify-between items-start">
                   <h3 className="text-xl font-medium text-white">{item.name}</h3>
-                  <button className="text-white/40 hover:text-red-400 transition-colors">
+                  <button 
+                    onClick={() => removeFromCart(item.id, item.size)}
+                    className="text-white/40 hover:text-red-400 transition-colors"
+                  >
                     <Trash2 size={20} />
                   </button>
                 </div>
                 <p className="text-sm text-emerald-400 font-mono tracking-wider">{item.category}</p>
                 <div className="flex items-center gap-6 pt-2 text-white/60">
                   <p>Size: <span className="text-white ml-2">{item.size}</span></p>
-                  <p>Qty: <span className="text-white ml-2">{item.quantity}</span></p>
+                  <div className="flex items-center gap-3">
+                    <p>Qty:</p>
+                    <div className="flex items-center gap-2 bg-white/5 rounded-full px-2 py-1">
+                      <button 
+                        onClick={() => updateQuantity(item.id, item.size, -1)}
+                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white/10 text-white"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <span className="text-white font-mono w-4 text-center">{item.quantity}</span>
+                      <button 
+                        onClick={() => updateQuantity(item.id, item.size, 1)}
+                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white/10 text-white"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="font-mono text-xl text-white">${item.price * item.quantity}</div>
+              <div className="font-mono text-xl text-white">₹{(Number(item.price) * item.quantity).toFixed(2)}</div>
             </div>
           ))}
 
@@ -55,7 +72,7 @@ export default function Cart() {
             <div className="space-y-4 text-white/80 font-light">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="font-mono text-white">${subtotal.toFixed(2)}</span>
+                <span className="font-mono text-white">₹{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Estimated Shipping</span>
@@ -72,7 +89,7 @@ export default function Cart() {
             <div className="flex justify-between items-end mb-8">
               <span className="text-lg font-medium text-white">Total</span>
               <span className="font-mono text-3xl text-emerald-300 shadow-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">
-                ${subtotal.toFixed(2)}
+                ₹{subtotal.toFixed(2)}
               </span>
             </div>
 

@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
 import { useState } from 'react';
+import { useCart } from '../context/CartContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { cartCount } = useCart();
 
   const links = [
     { name: 'Home', path: '/' },
@@ -48,7 +50,9 @@ const Navbar = () => {
           </button>
           <Link to="/cart" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/20 transition-colors relative">
             <ShoppingBag size={18} />
-            <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-emerald-500 text-[10px] flex items-center justify-center text-white font-bold">2</span>
+            {cartCount > 0 && (
+              <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-emerald-500 text-[10px] flex items-center justify-center text-white font-bold">{cartCount}</span>
+            )}
           </Link>
           <button 
             className="md:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/20 transition-colors"

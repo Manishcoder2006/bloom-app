@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, doc, updateDoc, orderBy, query, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { uploadImage } from '../utils/cloudinary';
-import { Upload, Plus, LogOut, Package, Loader2, ListOrdered, CheckCircle, Truck, XCircle, Clock, Trash2 } from 'lucide-react';
+import { Upload, Plus, LogOut, Package, Loader2, ListOrdered, CheckCircle, Truck, XCircle, Clock, Trash2, MapPin } from 'lucide-react';
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -257,6 +257,16 @@ export default function Admin() {
                         <span className="text-xs tracking-widest uppercase text-white/40 block mb-1">Shipping</span>
                         <p className="text-sm text-white/80">{order.shippingDetails?.address}</p>
                         <p className="text-sm text-white/80">{order.shippingDetails?.city}, {order.shippingDetails?.postalCode}</p>
+                        {order.shippingDetails?.lat && order.shippingDetails?.lng && (
+                          <a 
+                            href={`https://www.google.com/maps?q=${order.shippingDetails.lat},${order.shippingDetails.lng}`}
+                            target="_blank"
+                            rel="noreferrer" 
+                            className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 mt-2 inline-flex"
+                          >
+                            <MapPin size={12} /> View Live Location
+                          </a>
+                        )}
                       </div>
                     </div>
 
@@ -267,13 +277,13 @@ export default function Admin() {
                         {order.items?.map((item, idx) => (
                           <div key={idx} className="flex justify-between items-center bg-black/30 p-2 rounded-lg text-sm">
                             <span className="truncate pr-2">{item.name} <span className="text-white/40 text-xs">x{item.quantity} (Sz {item.size})</span></span>
-                            <span className="font-mono text-emerald-400">${item.price}</span>
+                            <span className="font-mono text-emerald-400">₹{item.price}</span>
                           </div>
                         ))}
                       </div>
                       <div className="flex justify-between items-center pt-2 border-t border-white/10">
                         <span className="font-medium">Total (COD)</span>
-                        <span className="font-mono text-lg font-bold">${order.totalAmount}</span>
+                        <span className="font-mono text-lg font-bold">₹{order.totalAmount}</span>
                       </div>
                     </div>
 
@@ -339,7 +349,7 @@ export default function Admin() {
               </div>
               
               <div className="space-y-1">
-                <label className="text-xs font-medium text-white/70 uppercase tracking-wider pl-1">Price ($)</label>
+                <label className="text-xs font-medium text-white/70 uppercase tracking-wider pl-1">Price (₹)</label>
                 <input required type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-emerald-500/50" />
               </div>
 
@@ -433,7 +443,7 @@ export default function Admin() {
                     <img src={product.image} alt={product.name} className="w-16 h-16 object-contain rounded-lg bg-white/5 p-1" />
                     <div>
                       <p className="font-medium text-sm line-clamp-1">{product.name}</p>
-                      <p className="text-emerald-400 text-xs mt-1 font-mono">${product.price}</p>
+                      <p className="text-emerald-400 text-xs mt-1 font-mono">₹{product.price}</p>
                       <p className="text-white/40 text-[10px] mt-1">{product.category}</p>
                     </div>
                     

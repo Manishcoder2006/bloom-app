@@ -142,7 +142,7 @@ export default function Profile() {
                          <span className="font-medium">{item.name}</span>
                          <span className="text-xs text-white/50">Size: {item.size} • Qty: {item.quantity}</span>
                       </div>
-                      <span className="font-mono text-emerald-400">${item.price}</span>
+                      <span className="font-mono text-emerald-400">₹{item.price}</span>
                     </div>
                   ))}
                 </div>

@@ -1,9 +1,30 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles, Download, ArrowUpRight } from 'lucide-react';
-import { products } from '../data/products';
+import { ArrowRight, Sparkles, ArrowUpRight, Loader2 } from 'lucide-react';
+import { collection, query, limit, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function Home() {
-  const featuredProduct = products[0];
+  const [featuredProduct, setFeaturedProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const q = query(collection(db, 'products'), limit(1));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          setFeaturedProduct({ id: doc.id, ...doc.data() });
+        }
+      } catch (error) {
+        console.error("Error fetching featured product", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, []);
 
   return (
     <div className="flex flex-col gap-6 pt-24 min-h-screen">
@@ -45,31 +66,42 @@ export default function Home() {
         </div>
 
         {/* RIGHT PANEL: FEATURED SHOE */}
-        <div className="w-full lg:w-[45%] liquid-glass-strong rounded-[2.5rem] p-6 flex flex-col relative border border-white/5 overflow-hidden group">
-          
-          <div className="absolute top-4 right-4 liquid-glass px-4 py-2 rounded-full z-10 font-mono text-sm border border-emerald-500/20 text-emerald-300 backdrop-blur-xl">
-            ${featuredProduct.price}
-          </div>
-
-          <div className="flex-1 w-full flex items-center justify-center relative min-h-[400px]">
-            {/* Glowing orb behind shoe */}
-            <div className="absolute w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px]" />
-            <img 
-              src={featuredProduct.image} 
-              alt={featuredProduct.name}
-              className="w-full h-full object-contain object-center z-10 drop-shadow-2xl group-hover:scale-105 transition-transform duration-700"
-            />
-          </div>
-
-          <div className="mt-4 liquid-glass p-6 rounded-3xl flex items-center justify-between group/card cursor-pointer border border-white/5 hover:border-emerald-500/30 transition-colors">
-            <div>
-              <p className="text-xs text-emerald-400 font-medium mb-1 tracking-wider uppercase">Featured Drop</p>
-              <h3 className="text-xl font-medium text-white">{featuredProduct.name}</h3>
+        <div className="w-full lg:w-[45%] liquid-glass-strong rounded-[2.5rem] p-6 flex flex-col relative border border-white/5 overflow-hidden group min-h-[400px]">
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 size={40} className="animate-spin text-emerald-500" />
             </div>
-            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover/card:bg-emerald-500 group-hover/card:text-black transition-colors">
-              <ArrowUpRight size={18} />
+          ) : featuredProduct ? (
+            <>
+              <div className="absolute top-4 right-4 liquid-glass px-4 py-2 rounded-full z-10 font-mono text-sm border border-emerald-500/20 text-emerald-300 backdrop-blur-xl">
+                ₹{Number(featuredProduct.price).toFixed(2)}
+              </div>
+
+              <div className="flex-1 w-full flex items-center justify-center relative min-h-[400px]">
+                {/* Glowing orb behind shoe */}
+                <div className="absolute w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px]" />
+                <img 
+                  src={featuredProduct.image} 
+                  alt={featuredProduct.name}
+                  className="w-full h-max-[300px] object-contain object-center z-10 drop-shadow-2xl group-hover:scale-105 transition-transform duration-700"
+                />
+              </div>
+
+              <Link to={`/product/${featuredProduct.id}`} className="mt-auto liquid-glass p-6 rounded-3xl flex items-center justify-between group/card cursor-pointer border border-white/5 hover:border-emerald-500/30 transition-colors">
+                <div>
+                  <p className="text-xs text-emerald-400 font-medium mb-1 tracking-wider uppercase">Featured Drop</p>
+                  <h3 className="text-xl font-medium text-white">{featuredProduct.name}</h3>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover/card:bg-emerald-500 group-hover/card:text-black transition-colors">
+                  <ArrowUpRight size={18} />
+                </div>
+              </Link>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-white/50">
+              No products available.
             </div>
-          </div>
+          )}
         </div>
 
       </section>

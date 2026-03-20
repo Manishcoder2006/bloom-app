@@ -1,17 +1,29 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Loader2, ArrowUpDown } from 'lucide-react';
-import { products as staticProducts } from '../data/products';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export default function Shop() {
-  const [products, setProducts] = useState([...staticProducts]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Filtering and Sorting State
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('none'); // 'none', 'lowToHigh', 'highToLow'
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortRef = useRef(null);
+
+  useEffect(() => {
+    // Click outside handler for sort dropdown
+    const handleClickOutside = (event) => {
+      if (sortRef.current && !sortRef.current.contains(event.target)) {
+        setIsSortOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -21,7 +33,7 @@ export default function Shop() {
         querySnapshot.forEach((doc) => {
           firebaseProducts.push({ id: doc.id, ...doc.data() });
         });
-        setProducts([...firebaseProducts, ...staticProducts]);
+        setProducts(firebaseProducts);
       } catch (error) {
         console.error("Error fetching products from Firebase:", error);
       } finally {
@@ -54,15 +66,17 @@ export default function Shop() {
 
   return (
     <div className="pt-32 pb-12 w-full max-w-7xl mx-auto space-y-8 px-4 relative">
-      {/* Header and Controls */}
-      <div className="liquid-glass-strong rounded-[2.5rem] p-8 border border-white/5 space-y-6 relative z-[100]">
+      {/* Header */}
+      <div className="liquid-glass-strong rounded-[2.5rem] p-8 border border-white/5 relative z-10">
         <div>
           <h2 className="text-4xl lg:text-5xl font-medium tracking-tight text-white mb-2">Shop The Void</h2>
           <p className="text-white/60">Our latest collection of hyper-premium bio-digital footwear.</p>
         </div>
+      </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-4 border-t border-white/10">
-          {/* Category Filters */}
+      {/* Controls Container outside of liquid-glass-strong to prevent clipping */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-[100]">
+        {/* Category Filters */}
           <div className="flex flex-wrap gap-2">
             {categories.map((cat, idx) => (
               <button 
@@ -80,33 +94,35 @@ export default function Shop() {
           </div>
 
           {/* Sort Menu */}
-          <div className="relative group z-50">
-            <div className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-colors border border-white/10 cursor-pointer ${sortOrder !== 'none' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'liquid-glass text-white/80'}`}>
+          <div className="relative z-50" ref={sortRef}>
+            <div 
+              onClick={() => setIsSortOpen(!isSortOpen)}
+              className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-colors border border-white/10 cursor-pointer ${sortOrder !== 'none' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'liquid-glass text-white/80'}`}
+            >
               <ArrowUpDown size={16} />
               {sortOrder === 'lowToHigh' ? 'Price: Low to High' : sortOrder === 'highToLow' ? 'Price: High to Low' : 'Sort by'}
             </div>
             
-            <div className="absolute right-0 top-full mt-2 w-48 liquid-glass-strong rounded-2xl border border-white/10 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 shadow-2xl z-[100]">
+            <div className={`absolute right-0 top-full mt-2 w-48 liquid-glass-strong rounded-2xl border border-white/10 overflow-hidden transition-all duration-300 shadow-2xl z-[100] ${isSortOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
               <button 
-                onClick={() => setSortOrder('none')}
+                onClick={() => { setSortOrder('none'); setIsSortOpen(false); }}
                 className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors"
               >
                 Featured (Default)
               </button>
               <button 
-                onClick={() => setSortOrder('lowToHigh')}
+                onClick={() => { setSortOrder('lowToHigh'); setIsSortOpen(false); }}
                 className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors"
               >
                 Price: Low to High
               </button>
               <button 
-                onClick={() => setSortOrder('highToLow')}
+                onClick={() => { setSortOrder('highToLow'); setIsSortOpen(false); }}
                 className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors"
               >
                 Price: High to Low
               </button>
             </div>
-          </div>
         </div>
       </div>
 
@@ -130,7 +146,7 @@ export default function Shop() {
             >
               <div className="flex justify-between items-start mb-4 relative z-10">
                 <span className="text-[10px] tracking-widest uppercase text-emerald-400 font-medium">{product.category}</span>
-                <span className="font-mono text-white/80">${Number(product.price).toFixed(2)}</span>
+                <span className="font-mono text-white/80">₹{Number(product.price).toFixed(2)}</span>
               </div>
               
               <div className="flex-1 w-full flex items-center justify-center relative my-4">

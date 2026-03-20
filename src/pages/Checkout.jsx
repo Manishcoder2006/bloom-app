@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, MapPin, Truck, CheckCircle2 } from 'lucide-react';
-import { products } from '../data/products';
+import { ArrowLeft, ShieldCheck, MapPin, Truck, CheckCircle2, Navigation, Loader2 } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 import { collection, addDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -11,6 +11,7 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Form State
   const [email, setEmail] = useState('');
@@ -20,23 +21,47 @@ export default function Checkout() {
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
 
-  // Using the same dummy data as Cart.jsx for the summary
-  const cartItems = [
-    { ...products[0], quantity: 1, size: 9 },
-    { ...products[3], quantity: 1, size: 10 }
-  ];
+  // Fetch and manage Cart
+  const { cartItems, clearCart } = useCart();
+  const subtotal = cartItems.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
   
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  // Location State
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationError, setLocationError] = useState('');
+
+  useEffect(() => {
+    // Automatically fetch user location for the map
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn('Geolocation error:', error);
+          setLocationError('Unable to retrieve automatic location. Continuing without it.');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setLocationError('Geolocation is not supported by your browser.');
+    }
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         setEmail(currentUser.email);
+        setAuthLoading(false);
+      } else {
+        navigate('/login');
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const handleCheckout = async (e) => {
     e.preventDefault();
@@ -51,7 +76,9 @@ export default function Checkout() {
         shippingDetails: {
           address,
           city,
-          postalCode
+          postalCode,
+          lat: userLocation ? userLocation.lat : null,
+          lng: userLocation ? userLocation.lng : null
         },
         items: cartItems.map(item => ({
           id: item.id,
@@ -69,7 +96,8 @@ export default function Checkout() {
       // 2. Save Order to Firestore
       await addDoc(collection(db, 'orders'), newOrder);
 
-      // 3. Show Success
+      // 3. Clear Cart & Show Success
+      clearCart();
       setIsProcessing(false);
       setIsSuccess(true);
       
@@ -83,6 +111,15 @@ export default function Checkout() {
       setIsProcessing(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen pt-32 pb-12 w-full flex flex-col items-center justify-center text-white space-y-4">
+        <Loader2 className="animate-spin text-emerald-500" size={40} />
+        <p className="text-white/60">Verifying secure session...</p>
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (
@@ -152,6 +189,31 @@ export default function Checkout() {
                   <input required type="text" value={postalCode} onChange={e => setPostalCode(e.target.value)} placeholder="10001" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-emerald-500/50 transition-colors" />
                 </div>
               </div>
+
+              {/* Automatic Map Location */}
+              <div className="pt-4 border-t border-white/10 space-y-4">
+                <div className="flex items-center gap-2 text-white">
+                   <Navigation size={18} className="text-emerald-400" />
+                   <h3 className="text-sm font-medium">Automatic Live Location</h3>
+                </div>
+                {userLocation ? (
+                  <div className="w-full h-48 rounded-xl overflow-hidden border border-emerald-500/30">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      frameBorder="0" 
+                      scrolling="no" 
+                      marginHeight="0" 
+                      marginWidth="0" 
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${userLocation.lng-0.005},${userLocation.lat-0.005},${userLocation.lng+0.005},${userLocation.lat+0.005}&layer=mapnik&marker=${userLocation.lat},${userLocation.lng}`}
+                    ></iframe>
+                  </div>
+                ) : (
+                  <div className="w-full p-4 liquid-glass rounded-xl flex items-center justify-center text-sm text-white/50">
+                    {locationError || 'Fetching your live location for precise delivery...'}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Payment Info */}
@@ -205,7 +267,7 @@ export default function Checkout() {
                     <p className="text-xs text-white/50">Size: {item.size} • Qty: {item.quantity}</p>
                   </div>
                   <div className="text-sm font-mono text-white/80">
-                    ${(item.price * item.quantity).toFixed(0)}
+                    ₹{(Number(item.price) * item.quantity).toFixed(2)}
                   </div>
                 </div>
               ))}
@@ -216,7 +278,7 @@ export default function Checkout() {
             <div className="space-y-4 text-white/80 font-light text-sm">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="font-mono text-white">${subtotal.toFixed(2)}</span>
+                <span className="font-mono text-white">₹{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
@@ -229,7 +291,7 @@ export default function Checkout() {
             <div className="flex justify-between items-end">
               <span className="text-lg font-medium text-white">Total</span>
               <span className="font-mono text-3xl text-emerald-300">
-                ${subtotal.toFixed(2)}
+                ₹{subtotal.toFixed(2)}
               </span>
             </div>
           </div>
